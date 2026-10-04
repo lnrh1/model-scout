@@ -56,6 +56,11 @@
   .bar .msg.err { color: var(--err); }
 
   .tblwrap { border: 1px solid var(--line); border-radius: 10px; overflow: auto; max-height: 62vh; }
+  .tblwrap::-webkit-scrollbar { height: 10px; width: 10px; }
+  .tblwrap::-webkit-scrollbar-track { background: #f1f3f5; border-radius: 5px; }
+  .tblwrap::-webkit-scrollbar-thumb { background: #c1c7d0; border-radius: 5px; border: 2px solid #f1f3f5; }
+  .tblwrap::-webkit-scrollbar-thumb:hover { background: #9aa3af; }
+  .tblwrap { scrollbar-width: thin; scrollbar-color: #c1c7d0 #f1f3f5; }
   table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 820px; }
   thead th {
     position: sticky; top: 0; z-index: 2; background: #fafbfc;
