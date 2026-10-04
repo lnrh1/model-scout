@@ -1,0 +1,21 @@
+{
+  "name": "model-scout",
+  "version": "1.0.0",
+  "description": "模型能力探测工具",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "llm",
+    "openai",
+    "anthropic",
+    "ai-tools",
+    "model-capabilities"
+  ],
+  "license": "MIT"
+}
