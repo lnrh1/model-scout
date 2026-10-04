@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<title>模型能力探测 · Model Scout</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --line: #e6e8ee; --line-2: #d5d9e2;
+    --fg: #24292f; --fg-2: #57606a; --fg-3: #8b949e;
+    --acc: #2563eb; --acc-bg: #eff4ff;
+    --ok: #16a34a; --warn: #d97706; --err: #dc2626;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 14px/1.6 system-ui, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 28px 20px 60px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+
+  .head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  .head h1 { font-size: 19px; font-weight: 700; letter-spacing: .3px; }
+  .head .tag { font-size: 11.5px; color: var(--fg-3); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+  .card h2 { font-size: 12px; font-weight: 600; color: var(--fg-3); letter-spacing: 1px; margin-bottom: 14px; }
+
+  .form { display: grid; grid-template-columns: 76px 1fr; gap: 10px 14px; align-items: center; }
+  .form label { text-align: right; color: var(--fg-2); font-size: 13px; white-space: nowrap; }
+  .form input[type=text], .form input[type=password] {
+    width: 100%; padding: 7px 10px; border: 1px solid var(--line-2); border-radius: 8px;
+    font: 13px var(--mono); background: #fff; color: var(--fg); outline: none;
+  }
+  .form input:focus { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-bg); }
+  .keyrow { display: flex; gap: 8px; }
+  .keyrow input { flex: 1; }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; }
+  .presets .pbtn { border: 1px solid var(--line-2); background: #fff; color: var(--fg-2); font-size: 12px; padding: 3px 10px; border-radius: 999px; cursor: pointer; }
+  .presets .pbtn:hover { border-color: var(--acc); color: var(--acc); }
+
+  .proto { display: inline-flex; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden; }
+  .proto button { border: 0; background: #fff; color: var(--fg-2); padding: 6px 14px; font-size: 13px; cursor: pointer; }
+  .proto button.on { background: var(--acc); color: #fff; }
+
+  .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .btn { border: 1px solid var(--line-2); background: #fff; color: var(--fg); padding: 7px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+  .btn:hover:not(:disabled) { border-color: var(--acc); color: var(--acc); }
+  .btn.primary { background: var(--acc); border-color: var(--acc); color: #fff; }
+  .btn.primary:hover:not(:disabled) { background: #1d4fd7; color: #fff; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .bar .msg { color: var(--fg-3); font-size: 12.5px; margin-left: auto; }
+  .bar .msg.err { color: var(--err); }
+
+  .tblwrap { border: 1px solid var(--line); border-radius: 10px; overflow: auto; max-height: 62vh; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 820px; }
+  thead th {
+    position: sticky; top: 0; z-index: 2; background: #fafbfc;
+    text-align: left; font-size: 11.5px; font-weight: 600; color: var(--fg-3); letter-spacing: .5px;
+    padding: 8px 10px; border-bottom: 1px solid var(--line);
+  }
+  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: #fafbfd; }
+  th.c-chk, td.c-chk { width: 34px; text-align: center; }
+  th.c-num, td.c-num { width: 132px; text-align: right; font: 12.5px var(--mono); white-space: nowrap; }
+  th.c-thk, td.c-thk { width: 52px; text-align: center; font-size: 14px; }
+  th.c-eff, td.c-eff { width: 260px; font: 12px var(--mono); color: var(--fg-2); }
+  th.c-st,  td.c-st  { width: 260px; }
+  td input[type=checkbox] { accent-color: var(--acc); width: 15px; height: 15px; cursor: pointer; }
+  .nm { font-size: 13px; font-weight: 600; line-height: 1.3; word-break: break-all; }
+  .dash { color: var(--fg-3); }
+
+  .cpbtn {
+    border: 0; background: transparent; color: var(--fg-3); cursor: pointer;
+    font-size: 12px; line-height: 1; padding: 3px 5px; margin-left: 5px; border-radius: 5px;
+    vertical-align: middle;
+  }
+  .cpbtn:hover:not(:disabled) { color: var(--acc); background: var(--acc-bg); }
+  .cpbtn:disabled { opacity: .25; cursor: not-allowed; }
+
+  .st { font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 256px; display: inline-block; vertical-align: middle; }
+  .st.okk { color: var(--ok); } .st.bad { color: var(--err); }
+  .spin { display: inline-block; width: 11px; height: 11px; border: 2px solid var(--line-2); border-top-color: var(--acc); border-radius: 50%; animation: sp .7s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+
+  .empty { padding: 34px 10px; text-align: center; color: var(--fg-3); font-size: 13px; }
+  .foot { color: var(--fg-3); font-size: 12px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>模型能力探测</h1>
+    <span class="tag">Model Scout</span>
+  </div>
+
+  <div class="card">
+    <h2>1 · 连接</h2>
+    <div class="form">
+      <label>快捷提供商</label>
+      <div class="presets" id="presets"></div>
+
+      <label>协议</label>
+      <div class="proto" id="proto">
+        <button data-p="openai" class="on">OpenAI 兼容</button>
+        <button data-p="anthropic">Anthropic兼容</button>
+      </div>
+
+      <label>Base URL</label>
+      <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1" spellcheck="false">
+
+      <label>API Key</label>
+      <div class="keyrow">
+        <input type="password" id="apiKey" placeholder="sk-…" autocomplete="off" spellcheck="false">
+        <button class="btn" id="showKey" type="button" title="显示 / 隐藏">👁</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2 · 模型列表</h2>
+    <div class="bar">
+      <button class="btn primary" id="btnList">获取模型</button>
+      <button class="btn" id="btnProbe" disabled>探测所选</button>
+      <button class="btn" id="btnAll" disabled>全选 / 取消</button>
+      <span class="msg" id="msg"></span>
+    </div>
+    <div class="tblwrap" style="margin-top:12px">
+      <table>
+        <thead>
+          <tr>
+            <th class="c-chk"></th>
+            <th>模型</th>
+            <th class="c-num">最大输出</th>
+            <th class="c-thk">思考</th>
+            <th class="c-eff">档位</th>
+            <th class="c-st">探测结果</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="6" class="empty">请先输入 API URL 及 API KEY 并获取模型列表</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">探测时可能会有少量费用产生。</p>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const state = { protocol: 'openai', models: [], busy: false };
+
+const OUTPUT_LADDER = [128000, 64000, 32768, 16384, 8192, 4096];
+const THINK_BUDGET = 1024;
+const THINK_MAX_TOKENS = 2048;
+
+async function relay(path, body, method) {
+  const r = await fetch('/api/request', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ protocol: state.protocol, baseUrl: $('baseUrl').value, key: $('apiKey').value, path, method: method || (body ? 'POST' : 'GET'), body }),
+  });
+  const raw = await r.text();
+  let j;
+  try {
+    j = JSON.parse(raw);
+  } catch {
+    throw new Error('本地服务未响应：/api/request 返回了非 JSON（HTTP ' + r.status + '）。请确认 server.mjs 正在运行。');
+  }
+  if (j.relayError) throw new Error('网络不通：' + j.relayError);
+  let parsed = null;
+  try { parsed = JSON.parse(j.text); } catch {}
+  return { status: j.status, parsed, text: j.text || '' };
+}
+
+function apath(rel) {
+  if (state.protocol !== 'anthropic') return rel;
+  const b = $('baseUrl').value.trim().replace(/\/+$/, '');
+  return /\/v1$/i.test(b) ? rel.replace(/^\/v1/, '') : rel;
+}
+
+const PRESETS = [
+  ['OpenAI', 'openai', 'https://api.openai.com/v1'],
+  ['Anthropic', 'anthropic', 'https://api.anthropic.com'],
+  ['Gemini', 'openai', 'https://generativelanguage.googleapis.com/v1beta/openai'],
+  ['DeepSeek', 'openai', 'https://api.deepseek.com'],
+  ['Kimi', 'openai', 'https://api.moonshot.cn'],
+  ['智谱 GLM', 'openai', 'https://open.bigmodel.cn/api/paas/v4'],
+  ['通义百炼', 'openai', 'https://dashscope.aliyuncs.com/compatible-mode/v1'],
+  ['硅基流动', 'openai', 'https://api.siliconflow.cn/v1'],
+  ['OpenRouter', 'openai', 'https://openrouter.ai/api/v1'],
+  ['Ollama', 'openai', 'http://127.0.0.1:11434/v1'],
+];
+for (const [name, p, u] of PRESETS) {
+  const b = document.createElement('button');
+  b.className = 'pbtn'; b.type = 'button'; b.textContent = name;
+  b.onclick = () => { setProto(p); $('baseUrl').value = u; };
+  $('presets').appendChild(b);
+}
+function setProto(p) {
+  state.protocol = p;
+  for (const el of $('proto').children) el.classList.toggle('on', el.dataset.p === p);
+}
+$('proto').onclick = (e) => { if (e.target.dataset.p) setProto(e.target.dataset.p); };
+$('showKey').onclick = () => { const i = $('apiKey'); i.type = i.type === 'password' ? 'text' : 'password'; };
+
+$('btnList').onclick = async () => {
+  if (!baseUrlOk()) return;
+  setBusy(true); setMsg('正在拉取模型列表…');
+  try {
+    const res = await relay(state.protocol === 'anthropic' ? apath('/v1/models') : '/models');
+    if (res.status >= 400) throw new Error('HTTP ' + res.status + '：' + brief(res));
+    const arr = res.parsed?.data || res.parsed?.models || [];
+    if (!arr.length) throw new Error('上游返回了空列表');
+    state.models = arr.map((m) => ({
+      id: m.id || m.name || m.slug || '',
+      checked: false,
+      mo: 0,
+      th: 0,
+      eff: '',
+      status: '待探测', statusCls: '',
+    })).filter((m) => m.id);
+    render();
+    setMsg('已拉取 ' + state.models.length + ' 个模型。');
+  } catch (e) { setMsg(e.message, true); }
+  setBusy(false);
+};
+
+function baseUrlOk() {
+  if (!/^(https?:\/\/)?[\w.-]+/i.test($('baseUrl').value.trim())) { setMsg('先填 Base URL', true); return false; }
+  if (!$('apiKey').value.trim()) { setMsg('先填 API Key', true); return false; }
+  return true;
+}
+function brief(res) {
+  const s = (res.text || '').replace(/\s+/g, ' ');
+  return s.length > 160 ? s.slice(0, 160) + '…' : s;
+}
+
+function render() {
+  const tb = $('tbody');
+  if (!state.models.length) return;
+  tb.innerHTML = state.models.map((m, i) => `
+    <tr data-i="${i}">
+      <td class="c-chk"><input type="checkbox" data-k="chk" ${m.checked ? 'checked' : ''}></td>
+      <td><div class="nm">${esc(m.id)}</div></td>
+      <td class="c-num"><span data-k="mo">${m.mo ? fmt(m.mo) : '<span class="dash">—</span>'}</span><button class="cpbtn" data-k="cp" title="复制最大输出" ${m.mo ? '' : 'disabled'}>⧉</button></td>
+      <td class="c-thk" data-k="th">${m.th ? '✓' : '<span class="dash">—</span>'}</td>
+      <td class="c-eff" data-k="eff">${m.eff ? esc(m.eff) : '<span class="dash">—</span>'}</td>
+      <td class="c-st"><span class="st ${m.statusCls}" data-k="status">${esc(m.status)}</span></td>
+    </tr>`).join('');
+  $('btnProbe').disabled = $('btnAll').disabled = false;
+  updateProbeCount();
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function fmt(n) { return n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0).replace(/\.0$/, '') + 'k' : String(n); }
+
+$('tbody').addEventListener('change', (e) => {
+  if (e.target.dataset.k !== 'chk') return;
+  const tr = e.target.closest('tr'); if (!tr) return;
+  const m = state.models[+tr.dataset.i]; if (!m) return;
+  m.checked = e.target.checked;
+  updateProbeCount();
+});
+
+$('tbody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-k=cp]');
+  if (!btn || btn.disabled) return;
+  const tr = btn.closest('tr'); if (!tr) return;
+  const m = state.models[+tr.dataset.i]; if (!m || !m.mo) return;
+  try {
+    await navigator.clipboard.writeText(String(m.mo));
+    btn.textContent = '✓';
+    setMsg('已复制 ' + m.id + ' 的最大输出：' + m.mo);
+  } catch {
+    btn.textContent = '✕';
+    setMsg('剪贴板不可用', true);
+  }
+  setTimeout(() => { btn.textContent = '⧉'; }, 1200);
+});
+
+function updateProbeCount() {
+  const n = state.models.filter((m) => m.checked).length;
+  $('btnProbe').textContent = n ? '探测所选（' + n + '）' : '探测所选';
+}
+$('btnAll').onclick = () => {
+  const any = state.models.some((m) => !m.checked);
+  for (const m of state.models) m.checked = any;
+  render();
+};
+
+$('btnProbe').onclick = async () => {
+  const targets = state.models.filter((m) => m.checked);
+  if (!targets.length) { setMsg('先勾选要探测的模型', true); return; }
+  if (!baseUrlOk()) return;
+
+  for (const m of targets) { m.mo = 0; m.th = 0; m.eff = ''; m.status = '待探测'; m.statusCls = ''; }
+  render();
+
+  setBusy(true);
+  setMsg('正在探测 ' + targets.length + ' 个模型…');
+  const queue = targets.slice(); const workers = [];
+  for (let i = 0; i < 2; i++) workers.push((async () => {
+    while (queue.length) await probeOne(queue.shift());
+  })());
+  await Promise.all(workers);
+
+  const ok = targets.filter((m) => m.statusCls === 'okk').length;
+  const bad = targets.filter((m) => m.statusCls === 'bad').length;
+  setMsg('探测完成：' + ok + ' 个成功、' + bad + ' 个失败。');
+  setBusy(false);
+};
+
+async function probeOne(m) {
+  setStatus(m, '探测中…', 'spin');
+  const notes = [];
+  try {
+    if (state.protocol === 'anthropic') await probeAnthropic(m, notes);
+    else await probeOpenAI(m, notes);
+    m.statusCls = 'okk';
+    setStatus(m, notes.join(' · ') || '通过', 'okk');
+  } catch (e) {
+    m.statusCls = 'bad';
+    setStatus(m, '✕ ' + (e.message || String(e)).slice(0, 60), 'bad');
+  }
+}
+function setStatus(m, text, cls) {
+  m.status = text; m.statusCls = cls || '';
+  const i = state.models.indexOf(m);
+  const row = $('tbody').querySelector('tr[data-i="' + i + '"]');
+  if (!row) return;
+  const el = row.querySelector('[data-k=status]');
+  el.className = 'st ' + (cls === 'spin' ? '' : cls);
+  el.innerHTML = (cls === 'spin' ? '<span class="spin"></span>' : '') + esc(text);
+  const mo = row.querySelector('[data-k=mo]');
+  if (mo) mo.innerHTML = m.mo ? fmt(m.mo) : '<span class="dash">—</span>';
+  const cp = row.querySelector('[data-k=cp]');
+  if (cp) cp.disabled = !m.mo;
+  const th = row.querySelector('[data-k=th]');
+  if (th) th.innerHTML = m.th ? '✓' : '<span class="dash">—</span>';
+  const eff = row.querySelector('[data-k=eff]');
+  if (eff) eff.innerHTML = m.eff ? esc(m.eff) : '<span class="dash">—</span>';
+}
+
+function parseLimit(text, sent) {
+  const s = String(text);
+  let m = s.match(/(\d{3,7})\s*(?:>|＞)\s*(\d{3,7})/);
+  if (m && +m[1] > +m[2]) return +m[2];
+  m = s.match(/(?:at most|no more than|up to|maximum allowed)\D{0,24}(\d{3,7})/i);
+  if (m) return +m[1];
+  m = s.match(/(?:最多|不超过|上限|至多|支持)\D{0,12}(\d{3,7})/);
+  if (m) return +m[1];
+  const nums = [...s.matchAll(/\d{3,7}/g)].map((x) => +x[0]).filter((n) => n !== sent && n <= 1048576);
+  return nums.length ? Math.max(...nums) : 0;
+}
+
+async function probeOutputOpenAI(m, notes) {
+  for (const n of OUTPUT_LADDER) {
+    const r = await relay('/chat/completions', {
+      model: m.id, messages: [{ role: 'user', content: 'hi' }],
+      max_tokens: n, stream: false,
+    });
+    if (r.status < 400) { m.mo = n; notes.push('输出≥' + fmt(n)); return; }
+    const lim = parseLimit(r.text, n);
+    if (lim) { m.mo = lim; notes.push('输出≤' + fmt(lim)); return; }
+  }
+  throw new Error('输出上限探测失败');
+}
+
+async function probeThinkingOpenAI(m, notes) {
+  const r0 = await relay('/chat/completions', {
+    model: m.id, messages: [{ role: 'user', content: 'ping' }],
+    max_tokens: THINK_MAX_TOKENS, reasoning_effort: 'low', stream: false,
+  });
+
+  if (r0.status >= 400) {
+    m.th = 0;
+    m.eff = '';
+    notes.push(/reasoning/i.test(r0.text) ? '无思考' : '思考未证实(' + r0.status + ')');
+    return;
+  }
+
+  const accepted = ['low'];
+  const candidates = ['minimal', 'medium', 'high', 'xhigh', 'max'];
+  for (const eff of candidates) {
+    const r = await relay('/chat/completions', {
+      model: m.id, messages: [{ role: 'user', content: 'ping' }],
+      max_tokens: THINK_MAX_TOKENS, reasoning_effort: eff, stream: false,
+    });
+    if (r.status < 400) accepted.push(eff);
+  }
+
+  const order = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+  accepted.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+
+  m.th = 1;
+  m.eff = accepted.join(',');
+  notes.push('思考✓(' + accepted.join('/') + ')');
+}
+
+async function probeOpenAI(m, notes) {
+  await probeOutputOpenAI(m, notes);
+  await probeThinkingOpenAI(m, notes);
+}
+
+async function probeThinkingAnthropic(m, notes) {
+  const r = await relay(apath('/v1/messages'), {
+    model: m.id, max_tokens: THINK_MAX_TOKENS,
+    thinking: { type: 'enabled', budget_tokens: THINK_BUDGET },
+    messages: [{ role: 'user', content: 'ping' }],
+  });
+  if (r.status < 400) { m.th = 1; m.eff = 'budget'; notes.push('思考✓(budget)'); }
+  else if (/thinking|budget/i.test(r.text)) { m.th = 0; m.eff = ''; notes.push('无思考'); }
+  else { m.th = 0; m.eff = ''; notes.push('思考未证实(' + r.status + ')'); }
+}
+async function probeOutputAnthropic(m, notes) {
+  for (const n of OUTPUT_LADDER) {
+    const r = await relay(apath('/v1/messages'), {
+      model: m.id, max_tokens: n,
+      messages: [{ role: 'user', content: 'hi' }],
+    });
+    if (r.status < 400) { m.mo = n; notes.push('输出≥' + fmt(n)); return; }
+    const lim = parseLimit(r.text, n);
+    if (lim) { m.mo = lim; notes.push('输出≤' + fmt(lim)); return; }
+  }
+  throw new Error('输出上限探测失败');
+}
+async function probeAnthropic(m, notes) {
+  await probeThinkingAnthropic(m, notes);
+  await probeOutputAnthropic(m, notes);
+}
+
+function setBusy(b) {
+  state.busy = b;
+  for (const id of ['btnList', 'btnProbe', 'btnAll']) {
+    $(id).disabled = b || (!state.models.length && id !== 'btnList');
+  }
+}
+function setMsg(t, err) { const el = $('msg'); el.textContent = t; el.className = 'msg' + (err ? ' err' : ''); }
+</script>
+</body>
+</html>
