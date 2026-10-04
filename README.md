@@ -67,6 +67,10 @@ http://localhost:5190
 ```bash
 SCOUT_PORT=8080 node server.mjs
 ```
+Windows:
+```powershell
+$env:SCOUT_PORT=8080; node server.mjs
+```
 
 ---
 
