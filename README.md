@@ -122,6 +122,12 @@ Node 服务**跑在你自己机器上**，只监听 `127.0.0.1`，外部无法�
 
 ---
 
+## 在线使用
+
+- 本项目已部署到Vercel，可访问https://model-scout-cloud-lingniruhua.vercel.app/ 进行在线使用。
+
+---
+
 ## 许可证
 
 本项目基于 MIT License 开源。
